@@ -1,20 +1,14 @@
-# Fase 2 — Endpoints Video Game Tracker
+# Fase 2 — Modelo Game + Endpoints REST
 # Proyecto: Video Game Tracker API
 
 ## Contexto
-Continuación de Fase 1. El servidor Node.js + Express ya corre en puerto 3000 con MongoDB local conectado.
-Ahora agregamos el modelo Game y los endpoints REST.
+El servidor Node.js + Express ya corre en puerto 3000 con MongoDB local conectado.
+Repo GitHub: https://github.com/OscarnNova/video-game-tracker.git
+Ahora agregamos el modelo Game y los tres endpoints REST.
 
 ---
 
-## Paso 0 — Verificación previa
-Confirma que el servidor esté corriendo antes de hacer cambios. Si no está corriendo, no inicies el servidor — solo crea los archivos.
-
----
-
-## Instrucciones
-
-### 1. Crear modelo Game
+## Paso 1 — Crear modelo Game
 Crea el archivo `src/models/Game.js`:
 
 ```js
@@ -41,7 +35,9 @@ const gameSchema = new mongoose.Schema({
 module.exports = mongoose.model('Game', gameSchema);
 ```
 
-### 2. Crear rutas de games
+---
+
+## Paso 2 — Crear rutas de games
 Crea el archivo `src/routes/games.js`:
 
 ```js
@@ -83,8 +79,10 @@ router.get('/:id', async (req, res) => {
 module.exports = router;
 ```
 
-### 3. Registrar rutas en app.js
-Edita `src/app.js` y agrega la ruta de games. El archivo debe quedar así:
+---
+
+## Paso 3 — Actualizar app.js
+Edita `src/app.js` para registrar las rutas de games:
 
 ```js
 const express = require('express');
@@ -105,14 +103,16 @@ module.exports = app;
 
 ---
 
-## Verificación antes de terminar
-1. Ejecuta `npm run lint` si existe, si no omite este paso
-2. Verifica con `git status` que solo se tocaron los archivos indicados
-3. No crear archivos de test, suites de jest ni carpetas __tests__/
+## Paso 4 — Commit y push a GitHub
+```bash
+git add .
+git commit -m "feat: add Game model and REST endpoints"
+git push origin main
+```
 
 ---
 
 ## Restricciones
 - No modificar server.js ni db.js
-- No crear archivos fuera de la estructura indicada
+- No crear archivos de test ni suites de jest
 - No instalar dependencias adicionales
