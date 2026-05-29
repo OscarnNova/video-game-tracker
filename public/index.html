@@ -321,7 +321,7 @@
 </head>
 <body>
 
-<canvas id="dragonCanvas" style="position:fixed;bottom:0;right:0;z-index:0;opacity:0.13;pointer-events:none;image-rendering:pixelated;"></canvas>
+<canvas id="dragonCanvas" style="position:fixed;bottom:0;right:0;z-index:0;opacity:0.20;pointer-events:none;image-rendering:pixelated;image-rendering:crisp-edges;"></canvas>
 
 <header>
   <span style="font-size:1.4rem">🎮</span>
@@ -620,152 +620,174 @@
 
 <script>
 (function () {
-  const canvas = document.getElementById('dragonCanvas');
-  const ctx = canvas.getContext('2d');
-  const S = 7; // tamaño de cada pixel
+  const cv = document.getElementById('dragonCanvas');
+  const ctx = cv.getContext('2d');
+
+  // Canvas = 35% ancho, 45% alto de ventana
+  const CW = Math.round(window.innerWidth * 0.35);
+  const CH = Math.round(window.innerHeight * 0.45);
+  cv.width = CW;
+  cv.height = CH;
+
+  // Dragón diseñado en grilla de 28x18 píxeles
+  // El scale se ajusta automáticamente al canvas
+  const COLS = 28, ROWS = 18;
+  const S = Math.min(Math.floor(CW / COLS), Math.floor(CH / ROWS));
 
   // Paleta
-  const C = {
-    _: null,
-    b: '#2e1065', // morado muy oscuro (borde)
-    m: '#7c3aed', // morado medio (cuerpo)
-    l: '#a855f7', // morado claro (highlight)
-    g: '#c4b5fd', // lavanda (panza/ala interna)
-    e: '#f0e6ff', // blanco (ojo)
-    p: '#1e0050', // morado negro (pupila)
-    f: '#f97316', // naranja fuego
-    y: '#fbbf24', // amarillo fuego
-    r: '#ef4444', // rojo fuego
+  const K = {
+    D: '#2e1065', // borde oscuro
+    M: '#6d28d9', // cuerpo medio
+    L: '#a855f7', // highlight
+    G: '#ddd6fe', // panza/ala interna
+    W: '#c4b5fd', // ala
+    E: '#f5f3ff', // ojo blanco
+    P: '#1e0050', // pupila
+    O: '#f97316', // fuego naranja
+    Y: '#fbbf24', // fuego amarillo
+    R: '#dc2626', // fuego rojo
   };
 
-  // Dragón en reposo — 32x24 píxeles
-  // Cuernos arriba, cabeza derecha, cuerpo, cola izquierda, patas abajo
-  const BASE = [
-//  0    1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16   17   18   19   20   21   22   23   24   25   26   27   28   29   30   31
-   ['_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', 'b', '_', 'b', '_', '_', '_', '_', '_'], // 0
-   ['_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', 'b', 'm', 'b', 'm', 'b', '_', '_', '_', '_'], // 1
-   ['_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', 'b', 'b', '_', '_', '_', '_', '_', '_', '_', 'b', 'm', 'l', 'm', 'l', 'm', 'b', '_', '_', '_'], // 2
-   ['_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', 'b', 'm', 'm', 'b', '_', '_', '_', '_', '_', 'b', 'm', 'l', 'm', 'l', 'm', 'l', 'm', 'b', '_', '_'], // 3
-   ['_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', 'b', 'm', 'l', 'l', 'm', 'b', '_', '_', '_', 'b', 'm', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'm', 'b', '_'], // 4
-   ['_', '_', '_', '_', '_', '_', '_', '_', '_', '_', 'b', 'm', 'l', 'l', 'e', 'l', 'm', 'b', '_', 'b', 'm', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'm', 'b'], // 5
-   ['_', '_', '_', '_', '_', '_', '_', '_', '_', 'b', 'm', 'l', 'l', 'p', 'l', 'l', 'l', 'm', 'b', 'm', 'l', 'l', 'l', 'l', 'g', 'g', 'l', 'l', 'l', 'l', 'l', 'm'], // 6
-   ['_', '_', '_', '_', '_', '_', '_', '_', 'b', 'm', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'm', 'l', 'l', 'l', 'g', 'g', 'g', 'g', 'g', 'l', 'l', 'l', 'l', 'm'], // 7
-   ['_', 'b', 'b', '_', '_', '_', '_', 'b', 'm', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'l', 'l', 'l', 'm'], // 8
-   ['b', 'm', 'm', 'b', '_', '_', 'b', 'm', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'l', 'l', 'm'], // 9
-   ['m', 'l', 'l', 'm', 'b', 'b', 'm', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'l', 'm'], // 10
-   ['m', 'l', 'l', 'l', 'm', 'm', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'm', 'b'], // 11
-   ['b', 'm', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'm', 'b', '_'], // 12
-   ['_', 'b', 'm', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'm', 'b', '_', '_'], // 13
-   ['_', '_', 'b', 'm', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'g', 'g', 'g', 'g', 'b', 'b', 'g', 'g', 'g', 'g', 'g', 'm', 'b', '_', '_', '_'], // 14
-   ['_', '_', '_', 'b', 'm', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'g', 'g', 'g', 'b', 'b', 'm', 'm', 'b', 'b', 'g', 'g', 'm', 'b', '_', '_', '_', '_'], // 15
-   ['_', '_', '_', '_', 'b', 'm', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'g', 'g', 'g', 'b', 'm', 'l', 'l', 'l', 'm', 'b', 'g', 'm', 'b', '_', '_', '_', '_', '_'], // 16
-   ['_', '_', '_', '_', '_', 'b', 'm', 'l', 'l', 'l', 'l', 'l', 'l', 'g', 'g', 'g', 'b', 'm', 'l', 'l', 'l', 'l', 'l', 'm', 'b', 'b', '_', '_', '_', '_', '_', '_'], // 17
-   ['_', '_', '_', '_', '_', '_', 'b', 'm', 'l', 'l', 'l', 'l', 'g', 'g', 'g', 'b', 'm', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'm', 'b', '_', '_', '_', '_', '_', '_'], // 18
-   ['_', '_', '_', '_', '_', '_', '_', 'b', 'm', 'l', 'l', 'b', 'g', 'g', 'b', 'm', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'm', 'b', '_', '_', '_', '_', '_', '_'], // 19
-   ['_', '_', '_', '_', '_', '_', '_', '_', 'b', 'm', 'b', '_', 'b', 'b', 'm', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'l', 'm', 'b', '_', '_', '_', '_', '_', '_', '_'], // 20
-   ['_', '_', '_', '_', '_', '_', '_', '_', '_', 'b', '_', '_', '_', 'b', 'm', 'l', 'l', 'b', 'b', 'l', 'l', 'b', 'm', 'b', '_', '_', '_', '_', '_', '_', '_', '_'], // 21
-   ['_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', 'b', 'm', 'b', '_', '_', 'b', 'm', 'b', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_'], // 22
-   ['_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', 'b', '_', '_', '_', '_', 'b', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_'], // 23
+  // Helper: dibuja 1 pixel en coordenada de grilla
+  function p(x, y, c) {
+    if (!K[c]) return;
+    ctx.fillStyle = K[c];
+    ctx.fillRect(x * S, y * S, S, S);
+  }
+
+  // ─── DEFINICIÓN DEL DRAGÓN (coordenadas fijas) ─────────────────────
+
+  function drawBody() {
+    // CUERNO (arriba de la cabeza, col 4-5 fila 0-1)
+    p(4,0,'D'); p(5,0,'D');
+    p(3,1,'D'); p(4,1,'M'); p(5,1,'M'); p(6,1,'D');
+
+    // CABEZA (cols 2-9, filas 2-7)
+    // fila 2 — tope cabeza
+    [3,4,5,6,7,8].forEach(x => p(x,2, x===3||x===8?'D':'M'));
+    // fila 3 — parte alta con ojo
+    [2,3,4,5,6,7,8,9].forEach(x => p(x,3, x===2||x===9?'D': x===5?'E':'L'));
+    // fila 4
+    [2,3,4,5,6,7,8,9].forEach(x => p(x,4, x===2||x===9?'D': x===5?'P': x===6?'L':'M'));
+    // fila 5
+    [2,3,4,5,6,7,8,9].forEach(x => p(x,5, x===2||x===9?'D':'M'));
+    // fila 6 — mandíbula superior
+    [2,3,4,5,6,7,8].forEach(x => p(x,6, x===2||x===8?'D':'M'));
+    // fila 7 — mandíbula inferior
+    [3,4,5,6,7].forEach(x => p(x,7, x===3||x===7?'D':'G'));
+
+    // HOCICO abierto (cols 0-3, filas 5-7)
+    [0,1,2,3].forEach(x => p(x,5, x===0?'D':'M')); // mandíbula superior
+    [0,1,2,3].forEach(x => p(x,6, x===0?'D': x===3?'D':'M'));
+    [1,2,3].forEach(x => p(x,7, x===1?'D':'G'));   // hueco boca
+
+    // CUELLO (cols 9-12, filas 4-9)
+    [4,5,6,7,8,9].forEach(y => {
+      p(9,y,'D'); p(10,y,'L'); p(11,y,'M'); p(12,y, y===4||y===9?'D':'M');
+    });
+
+    // CUERPO (cols 12-22, filas 5-14)
+    for (let y = 5; y <= 13; y++) {
+      for (let x = 12; x <= 22; x++) {
+        const border = x===12||x===22||y===5||y===13;
+        const belly = x>=14&&x<=20 && y>=7&&y<=11;
+        p(x,y, border?'D': belly?'G':'M');
+      }
+    }
+    // Highlight en espalda
+    [13,14,15,16,17,18,19,20,21].forEach(x => p(x,6,'L'));
+
+    // COLA (cols 20-27, filas 8-16, tapers)
+    [[20,14],[21,14],[22,14]].forEach(([x,y]) => p(x,y,'M'));
+    [[21,15],[22,15],[23,15],[24,15]].forEach(([x,y]) => p(x,y,'M'));
+    [[22,16],[23,16],[24,16],[25,16]].forEach(([x,y]) => p(x,y,'M'));
+    [[23,17],[24,17],[25,17],[26,17]].forEach(([x,y]) => p(x,y,'M'));
+    p(26,17,'D'); p(27,17,'D'); // punta cola
+
+    // PATAS (dos patas en la base del cuerpo)
+    [14,15].forEach(x => [13,14,15,16].forEach(y => p(x,y,'M')));
+    [17,18].forEach(x => [13,14,15,16].forEach(y => p(x,y,'M')));
+    // Garras
+    [13,14,15,16].forEach(x => p(x,17,'D'));
+    [16,17,18,19].forEach(x => p(x,17,'D'));
+  }
+
+  // ALA — 3 frames: arriba, medio, abajo
+  const WING_FRAMES = [
+    // Frame 0: ala arriba (punta en fila 0)
+    [[16,4],[17,4],[18,4],[19,4],[20,4],[21,4],
+     [17,3],[18,3],[19,3],[20,3],[21,3],
+     [18,2],[19,2],[20,2],[21,2],
+     [19,1],[20,1],[21,1],
+     [20,0]],
+    // Frame 1: ala medio
+    [[16,5],[17,5],[18,5],[19,5],[20,5],[21,5],
+     [17,4],[18,4],[19,4],[20,4],[21,4],
+     [18,3],[19,3],[20,3],[21,3],
+     [19,2],[20,2],[21,2]],
+    // Frame 2: ala abajo
+    [[16,6],[17,6],[18,6],[19,6],[20,6],[21,6],
+     [17,6],[18,6],[19,6],[20,6],
+     [18,7],[19,7],[20,7],[21,7],
+     [19,8],[20,8],[21,8]],
   ];
 
-  // Ala superior frame 0 (arriba)
-  const WING_UP = [
-    [27,2],[28,1],[29,1],[30,2],[31,2],
-    [28,2],[29,2],[30,3],[31,3],
-    [27,3],[28,3],[29,3],
-  ];
-  // Ala superior frame 1 (medio)
-  const WING_MID = [
-    [27,3],[28,3],[29,3],[30,4],[31,4],
-    [28,4],[29,4],[30,5],
-    [27,4],[28,5],
-  ];
-  // Ala superior frame 2 (abajo)
-  const WING_DOWN = [
-    [27,5],[28,5],[29,6],[30,6],[31,7],
-    [28,6],[29,7],[30,7],
-    [27,6],[28,7],[29,8],
-  ];
+  function drawWing(frame) {
+    const pixels = WING_FRAMES[frame % 3];
+    pixels.forEach(([x, y]) => p(x, y, 'W'));
+    // Borde del ala
+    pixels.slice(0,6).forEach(([x,y]) => p(x,y,'L'));
+  }
 
-  const WINGS = [WING_UP, WING_MID, WING_DOWN, WING_MID];
-
-  // Partículas de fuego
-  let particles = [];
+  // ─── PARTÍCULAS DE FUEGO ────────────────────────────────────────────
+  let parts = [];
   function spawnFire() {
-    // boca aprox en pixel (8,6) del canvas
-    const mx = 9 * S, my = 6 * S;
+    const mx = 0, my = 5 * S + S / 2;
     for (let i = 0; i < 3; i++) {
-      particles.push({
-        x: mx - Math.random() * S * 2,
-        y: my + (Math.random() - 0.5) * S * 2,
-        vx: -(2 + Math.random() * 3),
-        vy: (Math.random() - 0.5) * 1.5,
+      parts.push({
+        x: mx + Math.random() * S,
+        y: my + (Math.random() - 0.5) * S * 1.5,
+        vx: -(1.8 + Math.random() * 2.5),
+        vy: (Math.random() - 0.5) * 1.0,
         life: 1.0,
-        size: S * (0.6 + Math.random() * 0.8),
-        color: Math.random() < 0.4 ? 'y' : Math.random() < 0.6 ? 'f' : 'r'
+        sz: S * (0.5 + Math.random() * 0.6),
+        clr: Math.random() < 0.4 ? 'O' : (Math.random() < 0.5 ? 'Y' : 'R'),
       });
     }
   }
 
-  const COLS = BASE[0].length;
-  const ROWS = BASE.length;
-  canvas.width  = COLS * S + 60;
-  canvas.height = ROWS * S + 20;
-
-  let frame = 0;
-  let tick  = 0;
-  const FPS_INTERVAL = 1000 / 8; // 8 fps
-  let lastTime = 0;
-
-  function drawDragon(wFrame) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Cuerpo base
-    BASE.forEach((row, y) => {
-      row.forEach((cell, x) => {
-        if (cell !== '_' && C[cell]) {
-          ctx.fillStyle = C[cell];
-          ctx.fillRect(x * S, y * S, S, S);
-        }
-      });
-    });
-
-    // Alas animadas (sobreescribe la zona del ala)
-    WINGS[wFrame].forEach(([px, py]) => {
-      ctx.fillStyle = C['l'];
-      ctx.fillRect(px * S, py * S, S, S);
-    });
-
-    // Fuego
-    particles.forEach(p => {
-      ctx.globalAlpha = p.life * 0.9;
-      ctx.fillStyle = C[p.color];
-      ctx.fillRect(p.x, p.y, p.size, p.size);
+  function drawFire() {
+    parts.forEach(pt => {
+      ctx.globalAlpha = pt.life * 0.9;
+      ctx.fillStyle = K[pt.clr];
+      ctx.fillRect(pt.x, pt.y, pt.sz, pt.sz);
     });
     ctx.globalAlpha = 1;
   }
 
-  function update(timestamp) {
-    if (timestamp - lastTime < FPS_INTERVAL) {
-      requestAnimationFrame(update);
-      return;
+  // ─── LOOP PRINCIPAL ─────────────────────────────────────────────────
+  let wingFrame = 0, tick = 0, last = 0;
+  const INTERVAL = 130; // ~7fps
+
+  function loop(ts) {
+    if (ts - last >= INTERVAL) {
+      last = ts;
+      tick++;
+      if (tick % 3 === 0) wingFrame = (wingFrame + 1) % 3;
+      spawnFire();
+      parts = parts
+        .map(pt => ({ ...pt, x: pt.x + pt.vx, y: pt.y + pt.vy, life: pt.life - 0.055 }))
+        .filter(pt => pt.life > 0);
+
+      ctx.clearRect(0, 0, CW, CH);
+      drawBody();
+      drawWing(wingFrame);
+      drawFire();
     }
-    lastTime = timestamp;
-
-    tick++;
-    if (tick % 2 === 0) frame = (frame + 1) % WINGS.length;
-    if (tick % 1 === 0) spawnFire();
-
-    // Actualizar partículas
-    particles = particles
-      .map(p => ({ ...p, x: p.x + p.vx, y: p.y + p.vy, life: p.life - 0.07 }))
-      .filter(p => p.life > 0);
-
-    drawDragon(frame);
-    requestAnimationFrame(update);
+    requestAnimationFrame(loop);
   }
 
-  requestAnimationFrame(update);
+  requestAnimationFrame(loop);
 })();
 </script>
 </body>
