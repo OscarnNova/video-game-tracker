@@ -33,4 +33,15 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// DELETE /games/:id — eliminar juego
+router.delete('/:id', async (req, res) => {
+  try {
+    const game = await Game.findByIdAndDelete(req.params.id);
+    if (!game) return res.status(404).json({ error: 'Game not found' });
+    res.json({ message: 'Game deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

@@ -15,6 +15,16 @@ const gameSchema = new mongoose.Schema({
     type: String,
     enum: ['playing', 'completed', 'wishlist'],
     default: 'wishlist'
+  },
+  rating: {
+    type: Number,
+    min: 1,
+    max: 10,
+    default: null
+  },
+  coverUrl: {
+    type: String,
+    default: null
   }
 }, { timestamps: true });
 
