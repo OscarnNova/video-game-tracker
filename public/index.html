@@ -1050,7 +1050,7 @@
     const speed  = 0.3 + Math.random() * 0.5;
     const angle  = Math.random() * Math.PI * 2;
     // Bombs get a lifespan (in frames) before auto-exploding
-    const life   = isBomb ? 180 + Math.floor(Math.random() * 240) : Infinity;
+    const life   = isBomb ? 320 + Math.floor(Math.random() * 380) : Infinity;
     return {
       icon, isBomb,
       x: forceX !== undefined ? forceX : Math.random() * canvas.width,
@@ -1150,14 +1150,21 @@
       const spd = Math.hypot(p.vx, p.vy);
       if (spd > 1.0) { p.vx *= 0.92; p.vy *= 0.92; }
 
-      // Bomb lifespan countdown
+      // Bomb lifespan countdown + center proximity explosion
       if (p.isBomb && p.life !== Infinity) {
         p.life--;
-        if (p.life <= 0) {
+        // Probabilidad de explotar según cercanía al centro
+        const bcx = p.x + (p.icon.w * p.scale) / 2;
+        const bcy = p.y + (p.icon.h * p.scale) / 2;
+        const scx = canvas.width / 2;
+        const scy = canvas.height / 2;
+        const distCenter = Math.hypot(bcx - scx, bcy - scy);
+        const maxDist = Math.hypot(scx, scy);
+        const centerProb = Math.max(0, 1 - distCenter / maxDist);
+        const triggerCenter = Math.random() < centerProb * 0.007;
+        if (p.life <= 0 || triggerCenter) {
           // Explode!
-          const cx = p.x + (p.icon.w * p.scale) / 2;
-          const cy = p.y + (p.icon.h * p.scale) / 2;
-          spawnExplosion(cx, cy);
+          spawnExplosion(bcx, bcy);
           const edge2 = Math.floor(Math.random() * 4);
           let nx2, ny2;
           if (edge2 === 0)      { nx2 = Math.random() * canvas.width; ny2 = -20; }
