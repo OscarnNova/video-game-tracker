@@ -44,4 +44,15 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// PUT /games/:id — actualizar juego
+router.put('/:id', async (req, res) => {
+  try {
+    const game = await Game.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    if (!game) return res.status(404).json({ error: 'Game not found' });
+    res.json(game);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 module.exports = router;

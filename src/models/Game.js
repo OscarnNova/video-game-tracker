@@ -13,7 +13,7 @@ const gameSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['playing', 'completed', 'wishlist'],
+    enum: ['playing', 'completed', 'pending', 'wishlist'],
     default: 'wishlist'
   },
   rating: {

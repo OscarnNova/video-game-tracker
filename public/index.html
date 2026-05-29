@@ -283,18 +283,6 @@
 
     .game-rating-text { font-size: 0.78rem; color: #888; margin-left: 6px; }
 
-    .btn-delete {
-      background: transparent;
-      border: none;
-      color: #3a3a5a;
-      cursor: pointer;
-      font-size: 1.1rem;
-      padding: 4px;
-      transition: color 0.2s;
-      flex-shrink: 0;
-    }
-    .btn-delete:hover { color: #f87171; }
-
     .empty-state {
       text-align: center;
       padding: 60px 20px;
@@ -373,6 +361,43 @@
     .page-btn.active { background: #7c6af7; border-color: #7c6af7; color: #fff; font-weight: 700; }
     .page-btn:disabled { opacity: 0.3; pointer-events: none; }
 
+    /* Status pending */
+    .status-pending { background: #2a1a3a; color: #c084fc; border: 1px solid #c084fc; }
+
+    /* Card actions column */
+    .card-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .btn-delete {
+      background: none; border: none; padding: 4px 6px;
+      font-size: 1.1rem; color: #ef4444; cursor: none;
+      border-radius: 6px; transition: background 0.2s;
+      line-height: 1;
+    }
+    .btn-delete:hover { background: rgba(239,68,68,0.15); }
+    .btn-edit {
+      background: none; border: none; padding: 4px 6px;
+      cursor: none; color: #555; border-radius: 6px;
+      transition: color 0.2s, background 0.2s;
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 2px; width: 24px;
+    }
+    .btn-edit:hover { color: #7c6af7; background: rgba(124,106,247,0.12); }
+    .btn-edit span {
+      width: 4px; height: 4px;
+      background: currentColor;
+      border-radius: 50%;
+      display: block;
+    }
+
+    /* Edit modal */
+    #editModalOverlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1000; align-items:center; justify-content:center; }
+    #editModalOverlay.open { display:flex; }
+
     /* Custom leather glove cursor */
     *, *::before, *::after { cursor: none !important; }
     #custom-cursor {
@@ -387,6 +412,44 @@
   </style>
 </head>
 <body>
+
+<!-- MODAL EDITAR JUEGO -->
+<div id="editModalOverlay">
+  <div class="modal">
+    <h3>Editar juego</h3>
+    <input type="hidden" id="editGameId" />
+
+    <div class="form-group">
+      <label>Nombre del juego</label>
+      <input type="text" id="editTitle" placeholder="Título del juego" />
+    </div>
+
+    <div class="form-group">
+      <label>Género</label>
+      <input type="text" id="editGenre" placeholder="RPG, Acción, Aventura..." />
+    </div>
+
+    <div class="form-group">
+      <label>Estado</label>
+      <select id="editStatus" onchange="toggleEditRating()">
+        <option value="playing">Jugando</option>
+        <option value="completed">Completado</option>
+        <option value="pending">Pendiente</option>
+        <option value="wishlist">Wishlist</option>
+      </select>
+    </div>
+
+    <div class="form-group" id="editRatingGroup" style="display:none">
+      <label>Calificación (1-10)</label>
+      <div class="star-selector" id="editStarSelector"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeEditModal()">Cancelar</button>
+      <button class="btn-save" onclick="saveEdit()">Guardar cambios</button>
+    </div>
+  </div>
+</div>
 
 <canvas id="bgCanvas" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;image-rendering:pixelated;image-rendering:crisp-edges;"></canvas>
 
@@ -476,6 +539,7 @@
       <div class="tab active" onclick="filterGames('all', this)">Todos</div>
       <div class="tab" onclick="filterGames('playing', this)">Jugando</div>
       <div class="tab" onclick="filterGames('completed', this)">Completados</div>
+      <div class="tab" onclick="filterGames('pending', this)">Pendiente</div>
       <div class="tab" onclick="filterGames('wishlist', this)">Wishlist</div>
     </div>
 
@@ -507,6 +571,7 @@
       <select id="statusInput">
         <option value="playing">Jugando</option>
         <option value="completed">Completado</option>
+        <option value="pending">Pendiente</option>
         <option value="wishlist">Wishlist</option>
       </select>
     </div>
@@ -696,8 +761,9 @@
         `<span class="game-star ${i < (game.rating || 0) ? 'lit' : ''}">★</span>`
       ).join('');
 
-      const statusLabel = { playing: 'Jugando', completed: 'Completado', wishlist: 'Wishlist' }[game.status] || game.status;
+      const statusLabel = { playing: 'Jugando', completed: 'Completado', pending: 'Pendiente', wishlist: 'Wishlist' }[game.status] || game.status;
       const statusClass = `status-${game.status}`;
+      const canRate = game.status === 'completed';
 
       const cover = game.coverUrl
         ? `<img class="game-cover" src="${game.coverUrl}" alt="${game.title}" onerror="this.outerHTML='<div class=game-cover-placeholder>🎮</div>'" />`
@@ -711,11 +777,15 @@
             <div class="game-genre">${game.genre}</div>
             <span class="game-status ${statusClass}">${statusLabel}</span>
             <div style="display:flex;align-items:center;margin-top:4px">
-              <div class="game-stars">${stars}</div>
-              ${game.rating ? `<span class="game-rating-text">${game.rating}/10</span>` : ''}
+              ${canRate ? `<div class="game-stars">${stars}</div>${game.rating ? `<span class="game-rating-text">${game.rating}/10</span>` : ''}` : '<span style="font-size:0.75rem;color:#555;margin-top:2px">Solo se califica cuando está Completado</span>'}
             </div>
           </div>
-          <button class="btn-delete" onclick="deleteGame('${game._id}')" title="Eliminar">✕</button>
+          <div class="card-actions">
+            <button class="btn-delete" onclick="deleteGame('${game._id}')" title="Eliminar">✕</button>
+            <button class="btn-edit" onclick='openEditModal(${JSON.stringify(game)})' title="Editar">
+              <span></span><span></span><span></span><span></span><span></span><span></span>
+            </button>
+          </div>
         </div>
       `;
     }).join('');
@@ -740,6 +810,64 @@
   // Cerrar modal al click fuera
   document.getElementById('modalOverlay').addEventListener('click', function(e) {
     if (e.target === this) closeModal();
+  });
+
+  // ── EDIT MODAL ──────────────────────────────────────────────
+  let editSelectedRating = 0;
+
+  function openEditModal(game) {
+    document.getElementById('editGameId').value = game._id;
+    document.getElementById('editTitle').value = game.title;
+    document.getElementById('editGenre').value = game.genre;
+    document.getElementById('editStatus').value = game.status;
+    editSelectedRating = game.rating || 0;
+    renderEditStars();
+    toggleEditRating();
+    document.getElementById('editModalOverlay').classList.add('open');
+  }
+
+  function closeEditModal() {
+    document.getElementById('editModalOverlay').classList.remove('open');
+  }
+
+  function toggleEditRating() {
+    const status = document.getElementById('editStatus').value;
+    document.getElementById('editRatingGroup').style.display = status === 'completed' ? 'block' : 'none';
+  }
+
+  function renderEditStars() {
+    const sel = document.getElementById('editStarSelector');
+    if (!sel) return;
+    sel.innerHTML = Array.from({length:10}, (_,i) =>
+      `<span class="star-opt ${i < editSelectedRating ? 'selected' : ''}" onclick="setEditRating(${i+1})">★</span>`
+    ).join('');
+  }
+
+  function setEditRating(val) {
+    editSelectedRating = val;
+    renderEditStars();
+  }
+
+  async function saveEdit() {
+    const id     = document.getElementById('editGameId').value;
+    const title  = document.getElementById('editTitle').value.trim();
+    const genre  = document.getElementById('editGenre').value.trim();
+    const status = document.getElementById('editStatus').value;
+    const rating = status === 'completed' ? (editSelectedRating || null) : null;
+    if (!title || !genre) { alert('Título y género son requeridos'); return; }
+    try {
+      const res = await fetch(`${API}/games/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, genre, status, rating })
+      });
+      if (res.ok) { closeEditModal(); loadGames(); }
+      else { const e = await res.json(); alert(e.error || 'Error al guardar'); }
+    } catch(e) { alert('Error de red'); }
+  }
+
+  document.getElementById('editModalOverlay').addEventListener('click', function(e) {
+    if (e.target === this) closeEditModal();
   });
 
   loadGames();
