@@ -401,7 +401,7 @@
     </div>
 
     <div class="genres-card" id="genresCard">
-      <h3>Géneros</h3>
+      <h3>Top Géneros más jugados</h3>
       <div id="genresList"></div>
     </div>
 
@@ -682,7 +682,7 @@
     // Géneros
     const genreCount = {};
     allGames.forEach(g => { genreCount[g.genre] = (genreCount[g.genre] || 0) + 1; });
-    const topGenres = Object.entries(genreCount).sort((a,b) => b[1]-a[1]).slice(0, 6);
+    const topGenres = Object.entries(genreCount).sort((a,b) => b[1]-a[1]).slice(0, 3);
     document.getElementById('genresList').innerHTML = topGenres.map(([g]) => `<span class="genre-tag">${g}</span>`).join('');
   }
 
