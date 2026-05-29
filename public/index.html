@@ -321,7 +321,7 @@
 </head>
 <body>
 
-<canvas id="dragonCanvas" style="position:fixed;bottom:0;right:0;z-index:0;opacity:0.20;pointer-events:none;image-rendering:pixelated;image-rendering:crisp-edges;"></canvas>
+<canvas id="dragonCanvas" style="position:fixed;bottom:0;right:0;z-index:0;opacity:0.28;pointer-events:none;image-rendering:pixelated;image-rendering:crisp-edges;"></canvas>
 
 <header>
   <span style="font-size:1.4rem">🎮</span>
@@ -623,161 +623,141 @@
   const cv = document.getElementById('dragonCanvas');
   const ctx = cv.getContext('2d');
 
-  // Canvas = 35% ancho, 45% alto de ventana
-  const CW = Math.round(window.innerWidth * 0.35);
-  const CH = Math.round(window.innerHeight * 0.45);
+  // Canvas ancho = 70vw para que el fuego llegue a ~50% de pantalla
+  const CW = Math.round(window.innerWidth * 0.70);
+  const CH = Math.round(window.innerHeight * 0.48);
   cv.width = CW;
   cv.height = CH;
 
-  // Dragón diseñado en grilla de 28x18 píxeles
-  // El scale se ajusta automáticamente al canvas
   const COLS = 28, ROWS = 18;
-  const S = Math.min(Math.floor(CW / COLS), Math.floor(CH / ROWS));
+  const S = Math.min(Math.floor(CW * 0.40 / COLS), Math.floor(CH / ROWS));
 
-  // Paleta
+  // Dragón posicionado a la DERECHA del canvas
+  // El fuego viaja hacia la izquierda a través del canvas completo
+  const OX = CW - COLS * S - 4; // offset X: dragón pegado al borde derecho
+
+  // Paleta verde esmeralda
   const K = {
-    D: '#2e1065', // borde oscuro
-    M: '#6d28d9', // cuerpo medio
-    L: '#a855f7', // highlight
-    G: '#ddd6fe', // panza/ala interna
-    W: '#c4b5fd', // ala
-    E: '#f5f3ff', // ojo blanco
-    P: '#1e0050', // pupila
+    D: '#064e3b', // borde oscuro
+    M: '#059669', // cuerpo medio
+    L: '#34d399', // highlight
+    G: '#6ee7b7', // acento claro (reemplaza panza gris)
+    W: '#a7f3d0', // ala
+    E: '#f0fdf4', // ojo blanco
+    P: '#022c22', // pupila
     O: '#f97316', // fuego naranja
     Y: '#fbbf24', // fuego amarillo
     R: '#dc2626', // fuego rojo
   };
 
-  // Helper: dibuja 1 pixel en coordenada de grilla
   function p(x, y, c) {
     if (!K[c]) return;
     ctx.fillStyle = K[c];
-    ctx.fillRect(x * S, y * S, S, S);
+    ctx.fillRect(OX + x * S, y * S, S, S);
   }
 
-  // ─── DEFINICIÓN DEL DRAGÓN (coordenadas fijas) ─────────────────────
-
   function drawBody() {
-    // CUERNO (arriba de la cabeza, col 4-5 fila 0-1)
+    // CUERNO
     p(4,0,'D'); p(5,0,'D');
     p(3,1,'D'); p(4,1,'M'); p(5,1,'M'); p(6,1,'D');
 
     // CABEZA (cols 2-9, filas 2-7)
-    // fila 2 — tope cabeza
     [3,4,5,6,7,8].forEach(x => p(x,2, x===3||x===8?'D':'M'));
-    // fila 3 — parte alta con ojo
     [2,3,4,5,6,7,8,9].forEach(x => p(x,3, x===2||x===9?'D': x===5?'E':'L'));
-    // fila 4
     [2,3,4,5,6,7,8,9].forEach(x => p(x,4, x===2||x===9?'D': x===5?'P': x===6?'L':'M'));
-    // fila 5
     [2,3,4,5,6,7,8,9].forEach(x => p(x,5, x===2||x===9?'D':'M'));
-    // fila 6 — mandíbula superior
     [2,3,4,5,6,7,8].forEach(x => p(x,6, x===2||x===8?'D':'M'));
-    // fila 7 — mandíbula inferior
     [3,4,5,6,7].forEach(x => p(x,7, x===3||x===7?'D':'G'));
 
-    // HOCICO abierto (cols 0-3, filas 5-7)
-    [0,1,2,3].forEach(x => p(x,5, x===0?'D':'M')); // mandíbula superior
-    [0,1,2,3].forEach(x => p(x,6, x===0?'D': x===3?'D':'M'));
-    [1,2,3].forEach(x => p(x,7, x===1?'D':'G'));   // hueco boca
+    // HOCICO ABIERTO (cols 0-3, filas 5-7)
+    [0,1,2,3].forEach(x => p(x,5, x===0?'D':'M'));
+    [0,1,2,3].forEach(x => p(x,6, x===0||x===3?'D':'M'));
+    [1,2,3].forEach(x => p(x,7, x===1||x===3?'D':'G'));
 
     // CUELLO (cols 9-12, filas 4-9)
     [4,5,6,7,8,9].forEach(y => {
       p(9,y,'D'); p(10,y,'L'); p(11,y,'M'); p(12,y, y===4||y===9?'D':'M');
     });
 
-    // CUERPO (cols 12-22, filas 5-14)
+    // CUERPO (cols 12-22, filas 5-13) — sin color G pálido
     for (let y = 5; y <= 13; y++) {
       for (let x = 12; x <= 22; x++) {
         const border = x===12||x===22||y===5||y===13;
-        const belly = x>=14&&x<=20 && y>=7&&y<=11;
-        p(x,y, border?'D': belly?'G':'M');
+        const inner = x>=14&&x<=20 && y>=7&&y<=11;
+        p(x, y, border ? 'D' : inner ? 'M' : 'M');
       }
     }
-    // Highlight en espalda
+    // Highlight espalda
     [13,14,15,16,17,18,19,20,21].forEach(x => p(x,6,'L'));
+    // Acento panza (verde claro, no gris)
+    for (let x = 14; x <= 20; x++) for (let y = 8; y <= 11; y++) p(x,y,'G');
 
-    // COLA (cols 20-27, filas 8-16, tapers)
+    // COLA (tapers a la derecha)
     [[20,14],[21,14],[22,14]].forEach(([x,y]) => p(x,y,'M'));
     [[21,15],[22,15],[23,15],[24,15]].forEach(([x,y]) => p(x,y,'M'));
     [[22,16],[23,16],[24,16],[25,16]].forEach(([x,y]) => p(x,y,'M'));
     [[23,17],[24,17],[25,17],[26,17]].forEach(([x,y]) => p(x,y,'M'));
-    p(26,17,'D'); p(27,17,'D'); // punta cola
+    p(27,17,'D');
 
-    // PATAS (dos patas en la base del cuerpo)
+    // PATAS
     [14,15].forEach(x => [13,14,15,16].forEach(y => p(x,y,'M')));
     [17,18].forEach(x => [13,14,15,16].forEach(y => p(x,y,'M')));
-    // Garras
     [13,14,15,16].forEach(x => p(x,17,'D'));
     [16,17,18,19].forEach(x => p(x,17,'D'));
   }
 
-  // ALA — 3 frames: arriba, medio, abajo
-  const WING_FRAMES = [
-    // Frame 0: ala arriba (punta en fila 0)
-    [[16,4],[17,4],[18,4],[19,4],[20,4],[21,4],
-     [17,3],[18,3],[19,3],[20,3],[21,3],
-     [18,2],[19,2],[20,2],[21,2],
-     [19,1],[20,1],[21,1],
-     [20,0]],
-    // Frame 1: ala medio
-    [[16,5],[17,5],[18,5],[19,5],[20,5],[21,5],
-     [17,4],[18,4],[19,4],[20,4],[21,4],
-     [18,3],[19,3],[20,3],[21,3],
-     [19,2],[20,2],[21,2]],
-    // Frame 2: ala abajo
-    [[16,6],[17,6],[18,6],[19,6],[20,6],[21,6],
-     [17,6],[18,6],[19,6],[20,6],
-     [18,7],[19,7],[20,7],[21,7],
-     [19,8],[20,8],[21,8]],
+  // ALA animada 3 frames
+  const WINGS = [
+    [[18,0],[17,0],[19,0],[16,1],[17,1],[18,1],[19,1],[20,1],[15,2],[16,2],[17,2],[18,2],[19,2],[20,2],[21,2],[14,3],[15,3],[16,3],[17,3],[18,3],[19,3],[20,3],[21,3],[14,4],[15,4],[16,4],[17,4],[18,4],[19,4],[20,4],[13,5],[14,5],[15,5],[16,5],[17,5],[18,5],[19,5]],
+    [[18,1],[17,1],[19,1],[16,2],[17,2],[18,2],[19,2],[20,2],[15,3],[16,3],[17,3],[18,3],[19,3],[20,3],[21,3],[14,4],[15,4],[16,4],[17,4],[18,4],[19,4],[20,4],[14,5],[15,5],[16,5],[17,5],[18,5],[19,5],[20,5]],
+    [[18,3],[17,3],[19,3],[16,4],[17,4],[18,4],[19,4],[20,4],[15,5],[16,5],[17,5],[18,5],[19,5],[20,5],[21,5],[14,6],[15,6],[16,6],[17,6],[18,6],[19,6],[20,6],[14,7],[15,7],[16,7],[17,7],[18,7]],
   ];
 
   function drawWing(frame) {
-    const pixels = WING_FRAMES[frame % 3];
-    pixels.forEach(([x, y]) => p(x, y, 'W'));
-    // Borde del ala
-    pixels.slice(0,6).forEach(([x,y]) => p(x,y,'L'));
+    WINGS[frame % 3].forEach(([x, y]) => p(x, y, 'W'));
+    WINGS[frame % 3].slice(0, 3).forEach(([x, y]) => p(x, y, 'L'));
   }
 
-  // ─── PARTÍCULAS DE FUEGO ────────────────────────────────────────────
+  // FUEGO — partículas grandes que viajan hasta mitad de pantalla
   let parts = [];
   function spawnFire() {
-    const mx = 0, my = 5 * S + S / 2;
-    for (let i = 0; i < 3; i++) {
+    // Boca del dragón: col 0 del dragon = OX en canvas
+    const mx = OX + 0;
+    const my = CH * 0.40; // ~40% de altura del canvas
+    for (let i = 0; i < 6; i++) {
       parts.push({
-        x: mx + Math.random() * S,
-        y: my + (Math.random() - 0.5) * S * 1.5,
-        vx: -(1.8 + Math.random() * 2.5),
-        vy: (Math.random() - 0.5) * 1.0,
+        x: mx + Math.random() * S * 2,
+        y: my + (Math.random() - 0.5) * S * 3,
+        vx: -(4 + Math.random() * 5),   // velocidad alta hacia izquierda
+        vy: (Math.random() - 0.5) * 1.5,
         life: 1.0,
-        sz: S * (0.5 + Math.random() * 0.6),
+        sz: S * (1.0 + Math.random() * 1.2), // partículas grandes
         clr: Math.random() < 0.4 ? 'O' : (Math.random() < 0.5 ? 'Y' : 'R'),
+        decay: 0.018 + Math.random() * 0.012, // vida larga
       });
     }
   }
 
   function drawFire() {
     parts.forEach(pt => {
-      ctx.globalAlpha = pt.life * 0.9;
+      ctx.globalAlpha = pt.life * 0.85;
       ctx.fillStyle = K[pt.clr];
       ctx.fillRect(pt.x, pt.y, pt.sz, pt.sz);
     });
     ctx.globalAlpha = 1;
   }
 
-  // ─── LOOP PRINCIPAL ─────────────────────────────────────────────────
   let wingFrame = 0, tick = 0, last = 0;
-  const INTERVAL = 130; // ~7fps
 
   function loop(ts) {
-    if (ts - last >= INTERVAL) {
+    if (ts - last >= 130) {
       last = ts;
       tick++;
       if (tick % 3 === 0) wingFrame = (wingFrame + 1) % 3;
       spawnFire();
       parts = parts
-        .map(pt => ({ ...pt, x: pt.x + pt.vx, y: pt.y + pt.vy, life: pt.life - 0.055 }))
-        .filter(pt => pt.life > 0);
+        .map(pt => ({ ...pt, x: pt.x + pt.vx, y: pt.y + pt.vy, life: pt.life - pt.decay }))
+        .filter(pt => pt.life > 0 && pt.x > 0);
 
       ctx.clearRect(0, 0, CW, CH);
       drawBody();
