@@ -348,6 +348,31 @@
     .social-link.ig:hover  { color: #e1306c; border-color: #e1306c; background: #1a1a2e; }
     .social-link.tk:hover  { color: #69c9d0; border-color: #69c9d0; background: #1a1a2e; }
 
+    /* Paginación */
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    .page-btn {
+      min-width: 36px; height: 36px;
+      padding: 0 10px;
+      background: #16161e;
+      border: 1px solid #2a2a3a;
+      border-radius: 8px;
+      color: #888;
+      font-size: 0.85rem;
+      cursor: none;
+      transition: background 0.2s, border-color 0.2s, color 0.2s;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .page-btn:hover { background: #1e1e2e; border-color: #7c6af7; color: #a8a0f8; }
+    .page-btn.active { background: #7c6af7; border-color: #7c6af7; color: #fff; font-weight: 700; }
+    .page-btn:disabled { opacity: 0.3; pointer-events: none; }
+
     /* Custom leather glove cursor */
     *, *::before, *::after { cursor: none !important; }
     #custom-cursor {
@@ -457,6 +482,7 @@
     <div id="gamesContainer" class="games-grid">
       <div class="loading">Cargando juegos...</div>
     </div>
+    <div class="pagination" id="pagination"></div>
   </main>
 </div>
 
@@ -502,6 +528,8 @@
   const RAWG_KEY = '8024527e7ff5475f883e1d74ea024d8f';
   let allGames = [];
   let currentFilter = 'all';
+  let currentPage = 1;
+  const GAMES_PER_PAGE = 5;
   let selectedRating = 0;
   let selectedCover = null;
   let searchTimer = null;
@@ -626,21 +654,44 @@
 
   function filterGames(filter, el) {
     currentFilter = filter;
+    currentPage = 1;
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     el.classList.add('active');
     renderGames();
   }
 
+  function renderPagination(totalGames) {
+    const totalPages = Math.ceil(totalGames / GAMES_PER_PAGE);
+    const pag = document.getElementById('pagination');
+    if (totalPages <= 1) { pag.innerHTML = ''; return; }
+    let html = '';
+    html += `<button class="page-btn" onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>‹</button>`;
+    for (let i = 1; i <= totalPages; i++) {
+      html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+    }
+    html += `<button class="page-btn" onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>›</button>`;
+    pag.innerHTML = html;
+  }
+
+  function goToPage(page) {
+    currentPage = page;
+    renderGames();
+    document.getElementById('gamesContainer').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   function renderGames() {
     const container = document.getElementById('gamesContainer');
     const games = currentFilter === 'all' ? allGames : allGames.filter(g => g.status === currentFilter);
+    const start = (currentPage - 1) * GAMES_PER_PAGE;
+    const pageGames = games.slice(start, start + GAMES_PER_PAGE);
+    renderPagination(games.length);
 
     if (games.length === 0) {
       container.innerHTML = `<div class="empty-state"><div class="icon">🎮</div><p>No hay juegos aquí todavía.<br>¡Agrega el primero!</p></div>`;
       return;
     }
 
-    container.innerHTML = games.map(game => {
+    container.innerHTML = pageGames.map(game => {
       const stars = Array.from({length: 10}, (_, i) =>
         `<span class="game-star ${i < (game.rating || 0) ? 'lit' : ''}">★</span>`
       ).join('');
