@@ -398,6 +398,47 @@
     #editModalOverlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1000; align-items:center; justify-content:center; }
     #editModalOverlay.open { display:flex; }
 
+    /* Campo bloqueado */
+    input[readonly], select:disabled {
+      opacity: 0.5;
+      cursor: not-allowed !important;
+      background: #0f0f13 !important;
+    }
+
+    /* Star-opt en modal de edición con hover */
+    .star-opt {
+      font-size: 1.4rem;
+      cursor: pointer;
+      color: #3a3a5a;
+      transition: color 0.1s, transform 0.1s;
+      display: inline-block;
+    }
+    .star-opt.selected { color: #f59e0b; }
+    .star-opt.hovered  { color: #fbbf24; transform: scale(1.15); }
+
+    /* Panel de confirmación dentro del modal */
+    .confirm-panel {
+      display: none;
+      background: #1e1e2e;
+      border: 1px solid #7c6af7;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-top: 12px;
+    }
+    .confirm-panel.visible { display: block; }
+    .confirm-panel p { font-size: 0.82rem; color: #c4b5fd; margin-bottom: 10px; }
+    .confirm-panel .confirm-btns { display: flex; gap: 8px; }
+    .confirm-panel .btn-accept {
+      background: #7c6af7; color: #fff; border: none;
+      padding: 7px 16px; border-radius: 7px; cursor: pointer; font-size: 0.82rem;
+    }
+    .confirm-panel .btn-reject {
+      background: transparent; color: #888; border: 1px solid #3a3a5a;
+      padding: 7px 16px; border-radius: 7px; cursor: pointer; font-size: 0.82rem;
+    }
+    .confirm-panel .btn-accept:hover { background: #6b5ae0; }
+    .confirm-panel .btn-reject:hover { color: #ccc; border-color: #ccc; }
+
     /* Custom leather glove cursor */
     *, *::before, *::after { cursor: none !important; }
     #custom-cursor {
@@ -421,7 +462,7 @@
 
     <div class="form-group">
       <label>Nombre del juego</label>
-      <input type="text" id="editTitle" placeholder="Título del juego" />
+      <input type="text" id="editTitle" placeholder="Título del juego" readonly />
     </div>
 
     <div class="form-group">
@@ -431,12 +472,19 @@
 
     <div class="form-group">
       <label>Estado</label>
-      <select id="editStatus" onchange="toggleEditRating()">
+      <select id="editStatus" onchange="onEditStatusChange()">
         <option value="playing">Jugando</option>
         <option value="completed">Completado</option>
         <option value="pending">Pendiente</option>
         <option value="wishlist">Wishlist</option>
       </select>
+      <div class="confirm-panel" id="confirmCompletePanel">
+        <p>⚠️ Marcar como <strong>Completado</strong> es irreversible y ya no podrás cambiarlo.</p>
+        <div class="confirm-btns">
+          <button class="btn-accept" onclick="acceptComplete()">Aceptar</button>
+          <button class="btn-reject" onclick="rejectComplete()">Rechazar</button>
+        </div>
+      </div>
     </div>
 
     <div class="form-group" id="editRatingGroup" style="display:none">
@@ -815,11 +863,22 @@
   // ── EDIT MODAL ──────────────────────────────────────────────
   let editSelectedRating = 0;
 
+  let previousEditStatus = 'playing';
+
   function openEditModal(game) {
     document.getElementById('editGameId').value = game._id;
     document.getElementById('editTitle').value = game.title;
     document.getElementById('editGenre').value = game.genre;
-    document.getElementById('editStatus').value = game.status;
+    const sel = document.getElementById('editStatus');
+    sel.value = game.status;
+    previousEditStatus = game.status;
+    // Si ya estaba completado: bloquear select permanentemente
+    if (game.status === 'completed') {
+      sel.disabled = true;
+    } else {
+      sel.disabled = false;
+    }
+    document.getElementById('confirmCompletePanel').classList.remove('visible');
     editSelectedRating = game.rating || 0;
     renderEditStars();
     toggleEditRating();
@@ -835,12 +894,47 @@
     document.getElementById('editRatingGroup').style.display = status === 'completed' ? 'block' : 'none';
   }
 
+  function onEditStatusChange() {
+    const sel = document.getElementById('editStatus');
+    if (sel.value === 'completed') {
+      // Mostrar panel de confirmación y revertir temporalmente
+      sel.value = previousEditStatus;
+      document.getElementById('confirmCompletePanel').classList.add('visible');
+    } else {
+      document.getElementById('confirmCompletePanel').classList.remove('visible');
+      previousEditStatus = sel.value;
+      toggleEditRating();
+    }
+  }
+
+  function acceptComplete() {
+    const sel = document.getElementById('editStatus');
+    sel.value = 'completed';
+    sel.disabled = true;
+    document.getElementById('confirmCompletePanel').classList.remove('visible');
+    toggleEditRating();
+  }
+
+  function rejectComplete() {
+    document.getElementById('confirmCompletePanel').classList.remove('visible');
+  }
+
   function renderEditStars() {
     const sel = document.getElementById('editStarSelector');
     if (!sel) return;
     sel.innerHTML = Array.from({length:10}, (_,i) =>
-      `<span class="star-opt ${i < editSelectedRating ? 'selected' : ''}" onclick="setEditRating(${i+1})">★</span>`
+      `<span class="star-opt ${i < editSelectedRating ? 'selected' : ''}"
+        onclick="setEditRating(${i+1})"
+        onmouseover="hoverEditStars(${i+1})"
+        onmouseout="hoverEditStars(0)">★</span>`
     ).join('');
+  }
+
+  function hoverEditStars(val) {
+    document.querySelectorAll('#editStarSelector .star-opt').forEach((s, i) => {
+      s.classList.toggle('hovered', val > 0 && i < val);
+      s.classList.toggle('selected', val === 0 && i < editSelectedRating);
+    });
   }
 
   function setEditRating(val) {
