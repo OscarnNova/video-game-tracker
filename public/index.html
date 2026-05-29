@@ -733,6 +733,12 @@
     const status = document.getElementById('statusInput').value;
     if (!title) { alert('Escribe el nombre del juego'); return; }
     if (!genre) { alert('Escribe el género'); return; }
+    // Verificar duplicado
+    const duplicate = allGames.find(g => g.title.toLowerCase() === title.toLowerCase());
+    if (duplicate) {
+      alert(`"${duplicate.title}" ya está en tu biblioteca. No puedes agregar el mismo juego dos veces.`);
+      return;
+    }
     try {
       const res = await fetch(`${API}/games`, {
         method: 'POST',
@@ -829,7 +835,7 @@
             </div>
           </div>
           <div class="card-actions">
-            <button class="btn-delete" onclick="deleteGame('${game._id}')" title="Eliminar">✕</button>
+            ${game.status !== 'completed' ? `<button class="btn-delete" onclick="deleteGame('${game._id}')" title="Eliminar">✕</button>` : '<div style="width:32px"></div>'}
             <button class="btn-edit" onclick='openEditModal(${JSON.stringify(game)})' title="Editar">
               <span></span><span></span><span></span><span></span><span></span><span></span>
             </button>
