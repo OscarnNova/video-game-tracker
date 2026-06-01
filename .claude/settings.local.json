@@ -3,7 +3,14 @@
     "allow": [
       "PowerShell(npm run *)",
       "PowerShell(Get-Command *)",
-      "PowerShell(winget install *)"
+      "PowerShell(winget install *)",
+      "Bash(git pull *)",
+      "Bash(rm src/models/Game.js)",
+      "Bash(rm src/routes/games.js)",
+      "Bash(rm -rf public/)",
+      "Bash(npm run *)",
+      "Bash(curl http://localhost:3000/health)",
+      "Bash(git add *)"
     ]
   }
 }
